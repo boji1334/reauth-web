@@ -1,0 +1,36 @@
+# 公益站反代：Cloudflare 回源用 443（zone SSL=Full，接受自签/internal 证书）
+# 域名通过环境变量 REAUTH_DOMAIN 注入
+{
+	admin off
+}
+
+(sec) {
+	header {
+		-Server
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		X-Robots-Tag "noindex, nofollow"
+	}
+}
+
+{$REAUTH_DOMAIN:reauth.example.com} {
+	tls internal
+	encode zstd gzip
+	import sec
+
+	# 只允许 Cloudflare 回源；直接扫 IP / 换 Host 的请求一律 403
+	# REAUTH_TRUSTED_IPS 由部署脚本按 Cloudflare 官方 IP 段生成
+	@not_cf not remote_ip 127.0.0.1 ::1 {$REAUTH_TRUSTED_IPS:173.245.48.0/20}
+	respond @not_cf "forbidden" 403 {
+		close
+	}
+
+	reverse_proxy reauth-web:8080 {
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+		# 透传 Cloudflare 提供的真实访客 IP（站点用它做限流与会话绑定）
+		header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+	}
+}

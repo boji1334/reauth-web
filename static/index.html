@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>公益协议重登站</title>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#151b2f; --panel-2:#1c2440; --line:#28324f;
+    --text:#e8ecf8; --muted:#98a3c2; --gold:#f5c453; --blue:#4a9cff;
+    --ok:#39d98a; --bad:#ff6b7a;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;min-height:100vh;color:var(--text);
+    background:radial-gradient(1200px 600px at 15% -10%,#1b2650 0%,transparent 60%),
+               radial-gradient(900px 500px at 95% 0%,#2a1f45 0%,transparent 55%),
+               var(--bg);
+    font:15px/1.6 "Segoe UI",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  .wrap{max-width:1040px;margin:0 auto;padding:28px 18px 90px}
+  header.top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand .logo{
+    width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:22px;
+    background:linear-gradient(135deg,#f5c453,#ff9f43);color:#241a00;box-shadow:0 8px 24px #f5c45333
+  }
+  h1{font-size:20px;margin:0}
+  .sub{color:var(--muted);font-size:13px}
+  .notice{
+    border:1px solid var(--line);background:#141a2c;color:var(--muted);
+    border-radius:12px;padding:10px 14px;font-size:13px;margin-bottom:18px
+  }
+  .tabs{display:flex;gap:10px;padding:6px;border:1px solid var(--line);border-radius:14px;background:#121a2d;margin-bottom:18px}
+  .tab{
+    flex:1;border:none;cursor:pointer;border-radius:11px;padding:11px 14px;background:transparent;
+    color:var(--muted);font-size:15px;font-weight:600;display:flex;flex-direction:column;gap:3px;
+    align-items:flex-start;transition:background .15s ease,color .15s ease,box-shadow .15s ease
+  }
+  .tab .t-sub{font-size:12px;font-weight:400;opacity:.85}
+  .tab:hover{color:var(--text)}
+  .tab.is-active{color:#0c1020}
+  .tab.is-active.is-blue{background:linear-gradient(135deg,#4a9cff,#6cc0ff);box-shadow:0 8px 22px #4a9cff33}
+  .tab.is-active.is-gold{background:linear-gradient(135deg,#f5c453,#ffb02e);box-shadow:0 8px 22px #f5c45333}
+  .tab.is-active .t-sub{opacity:.72}
+  .pane{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:20px}
+  .pane h2{margin:0 0 4px;font-size:18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .pane .tip{color:var(--muted);font-size:13px;margin-bottom:14px}
+  .modes{display:flex;gap:8px;margin:0 0 12px}
+  .mode-btn{
+    border:1px solid var(--line);background:#121a2d;color:var(--muted);border-radius:10px;
+    padding:6px 12px;font-size:13px;cursor:pointer
+  }
+  .mode-btn.is-active{color:var(--text);border-color:#3a4770;background:#1b2340}
+  textarea{
+    width:100%;min-height:170px;resize:vertical;border-radius:12px;padding:12px 14px;
+    background:#0e1425;border:1px solid var(--line);color:var(--text);
+    font-family:ui-monospace,Consolas,monospace;font-size:13px;line-height:1.7
+  }
+  textarea:focus{outline:none;border-color:#4a9cff88}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
+  .btn{border:none;border-radius:11px;padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer;color:#0c1020}
+  .btn.gold{background:linear-gradient(135deg,#f5c453,#ffb02e)}
+  .btn.blue{background:linear-gradient(135deg,#4a9cff,#6cc0ff);color:#04121f}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .checks{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;color:var(--muted);font-size:13px}
+  .checks label{display:flex;align-items:center;gap:7px;cursor:pointer}
+  .progress{margin-top:16px}
+  .bar{height:8px;border-radius:999px;background:#0e1425;overflow:hidden;border:1px solid var(--line)}
+  .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,#4a9cff,#39d98a);transition:width .3s}
+  .steps-head{
+    display:flex;align-items:center;gap:10px;margin-top:14px;color:var(--muted);font-size:12px;flex-wrap:wrap
+  }
+  .step-chip{
+    display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;
+    border:1px solid #24304e;background:#121a2d;color:#6b779a;font-size:12px
+  }
+  .step-chip.is-running{color:var(--blue);border-color:#4a9cff66;background:#12203a}
+  .step-chip.is-done{color:var(--ok);border-color:#39d98a44}
+  .step-chip.is-error{color:var(--bad);border-color:#ff6b7a55}
+  .accounts{margin:12px 0 0;padding:0;list-style:none}
+  .accounts li{
+    border-radius:12px;background:#121a2d;border:1px solid #1e2740;margin-bottom:10px;padding:10px 12px
+  }
+  .acc-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .acc-mail{font-family:ui-monospace,Consolas,monospace;color:#cfd7ee;word-break:break-all}
+  .acc-msg{color:var(--muted);font-size:13px}
+  .acc-time{color:#6b779a;font-size:12px}
+  .pill{font-size:11px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+  .pill.ok{color:var(--ok);border-color:#39d98a44}
+  .pill.bad{color:var(--bad);border-color:#ff6b7a55}
+  .pill.cache{color:var(--gold);border-color:#f5c45355}
+  .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+  .dot.pending{background:#6b779a}
+  .dot.running{background:var(--blue);box-shadow:0 0 0 3px #4a9cff33}
+  .dot.done{background:var(--ok)}
+  .dot.error{background:var(--bad)}
+  .downloads{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+  .dl{
+    display:flex;flex-direction:column;gap:2px;text-align:left;border-radius:12px;padding:10px 16px;
+    border:1px solid var(--line);background:#121a2d;color:var(--text);cursor:pointer
+  }
+  .dl:hover{border-color:#3a4770}
+  .dl b{font-size:13px}
+  .dl span{color:var(--muted);font-size:11px}
+  .status{margin-top:12px;font-size:13px;color:var(--muted)}
+  .status.error{color:var(--bad)}
+  .status.ok{color:var(--ok)}
+  .hidden{display:none !important}
+  footer{margin-top:26px;color:#6b779a;font-size:12px;text-align:center}
+  code.k{background:#0e1425;border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:#e8ecf8}
+  /* 右下角：访客统计 + GitHub 预留位 */
+  .corner{
+    position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;align-items:flex-end;gap:8px;z-index:20
+  }
+  .visitor-panel{
+    width:236px;border-radius:14px;border:1px solid var(--line);background:#121a2dee;
+    backdrop-filter:blur(6px);padding:12px 14px;box-shadow:0 16px 40px #0008
+  }
+  .visitor-panel .vp-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .visitor-panel .vp-head strong{font-size:13px}
+  .visitor-panel .vp-head button{
+    border:none;background:transparent;color:var(--muted);font-size:16px;cursor:pointer;line-height:1
+  }
+  .vp-metrics{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px}
+  .vp-metrics div{background:#0e1425;border:1px solid var(--line);border-radius:9px;padding:6px 4px;text-align:center}
+  .vp-metrics span{display:block;color:var(--muted);font-size:11px}
+  .vp-metrics strong{font-size:14px;color:var(--text)}
+  .vp-days{font-size:12px;color:var(--muted)}
+  .vp-days div{display:flex;justify-content:space-between;padding:2px 0}
+  .vp-days i{font-style:normal;color:#cfd7ee}
+  .visitor-summary{
+    border:1px solid var(--line);background:#121a2d;border-radius:999px;padding:7px 14px;
+    color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:8px;font-size:12px
+  }
+  .visitor-summary strong{color:var(--text);font-size:14px}
+  .visitor-summary i{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block}
+  .gh-slot{
+    display:none;align-items:center;gap:6px;font-size:12px;color:#cfd7ee;text-decoration:none;
+    border:1px solid #f5c45355;background:#1a1a2b;border-radius:999px;padding:6px 12px
+  }
+  .gh-slot.is-ready{display:inline-flex}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">✨</div>
+      <div>
+        <h1 id="siteName">公益协议重登站</h1>
+        <div class="sub">邮箱----密码----2fa 直接换全新文件 · 专治 401 · 不接手机号</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="notice" id="notice">
+    纯公益站：粘贴 <code class="k">邮箱----密码----2fa</code>（一行一个）即可协议重登，跑完即销毁结果。
+    本站不接手机号，账号若被要求手机号验证会直接报错。
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab is-blue" type="button" data-mode="reauth">
+      🔄 协议重登
+      <span class="t-sub">专治 401 · 出 Sub2 合并 json + 单独 zip</span>
+    </button>
+    <button class="tab is-gold is-active" type="button" data-mode="redeem">
+      🧾 卡密兑换
+      <span class="t-sub">贴卡密直接兑换成品 · 自选 CPA / Sub2 / Cockpit</span>
+    </button>
+  </nav>
+
+  <!-- 协议重登 -->
+  <section class="pane hidden" id="pane-reauth">
+    <h2>🔄 协议重登</h2>
+    <div class="tip">
+      粘贴账号（一行一个，格式 <code class="k">邮箱----密码----2fa</code>），跑完下载新的 Sub2
+      文件，覆盖旧的 401 文件即可。<b>本站不接手机号</b>：账号若被要求手机号验证会直接报错。
+    </div>
+    <textarea id="text-reauth" placeholder="user@icloud.com----password----ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"></textarea>
+    <div class="row">
+      <button class="btn blue" id="run-reauth" type="button">开始重登</button>
+      <span class="status" id="status-reauth"></span>
+    </div>
+    <div class="progress hidden" id="progress-reauth">
+      <div class="bar"><i></i></div>
+      <ul class="accounts"></ul>
+      <div class="downloads"></div>
+    </div>
+  </section>
+
+  <!-- 卡密兑换 -->
+  <section class="pane" id="pane-redeem">
+    <h2>🧾 卡密兑换</h2>
+    <div class="tip">
+      <b>兑换站：不登录、不重登。</b>把卡密（<code class="k">邮箱----密码----2fa</code>）贴进来，
+      直接取回这个账号<b>接码时就已经生成的成品文件</b>；一次贴多个就批量兑换。
+      也可以改贴 <b>sub2 文件</b>（整段 json）在本地转格式。
+    </div>
+    <div class="modes" id="modes-redeem">
+      <button class="mode-btn is-active" type="button" data-input="auto">自动识别</button>
+      <button class="mode-btn" type="button" data-input="lines">卡密（一行一个）</button>
+      <button class="mode-btn" type="button" data-input="json">sub2 文件</button>
+    </div>
+    <textarea id="text-redeem" placeholder="① 卡密：user@icloud.com----password----ABCDEFGHIJKLMNOPQRSTUVWXYZ234567
+② 或直接粘 sub2api 文件：{&quot;accounts&quot;:[{&quot;credentials&quot;:{...}}]}"></textarea>
+    <div class="checks" id="checks-redeem">
+      <label><input type="checkbox" value="cpa" checked /> CPA 文件</label>
+      <label><input type="checkbox" value="sub2-merged" checked /> Sub2 合并 json</label>
+      <label><input type="checkbox" value="sub2-single" checked /> Sub2 单独 zip</label>
+      <label><input type="checkbox" value="cockpit" checked /> Cockpit 文件</label>
+    </div>
+    <div class="row">
+      <button class="btn gold" id="run-redeem" type="button">开始兑换</button>
+      <span class="status" id="status-redeem"></span>
+    </div>
+    <div class="progress hidden" id="progress-redeem">
+      <div class="bar"><i></i></div>
+      <ul class="accounts"></ul>
+      <div class="downloads"></div>
+    </div>
+  </section>
+
+  <footer>公益站 · 结果仅保存在内存，任务过期自动销毁 · 请勿用于任何违规用途</footer>
+</div>
+
+<div class="corner">
+  <a class="gh-slot" id="ghSlot" href="#" target="_blank" rel="noreferrer noopener">
+    <span>⭐</span><span id="ghSlotText">GitHub 点个 star</span>
+  </a>
+  <section class="visitor-panel hidden" id="visitorPanel" aria-label="全站访问统计">
+    <div class="vp-head">
+      <strong>全站访问记录</strong>
+      <button id="visitorClose" type="button" aria-label="关闭">×</button>
+    </div>
+    <div class="vp-metrics">
+      <div><span>今日访客</span><strong id="vpToday">--</strong></div>
+      <div><span>今日访问</span><strong id="vpVisits">--</strong></div>
+      <div><span>近10分钟</span><strong id="vpOnline">--</strong></div>
+    </div>
+    <div class="vp-days" id="vpDays"></div>
+  </section>
+  <button class="visitor-summary" id="visitorSummary" type="button" aria-expanded="false">
+    <i aria-hidden="true"></i>
+    <span>全站访问</span>
+    <strong id="visitorToday">--</strong>
+    <span>今日访客</span>
+  </button>
+</div>
+
+<script>
+const modeOutputs = {
+  reauth: ["sub2-merged", "sub2-single"],
+  redeem: ["cpa", "sub2-merged", "sub2-single", "cockpit"],
+};
+const outputLabels = {
+  "cpa": ["CPA 文件", "单个邮箱一个 json"],
+  "sub2-merged": ["Sub2 合并 json", "全部账号合并成一个文件"],
+  "sub2-single": ["Sub2 单独 zip", "每个邮箱一个 json，打包下载"],
+  "cockpit": ["Cockpit 文件", "单个邮箱一个 json"],
+};
+const STATUS_ICON = {pending: "○", running: "◔", done: "✓", error: "✕"};
+let currentMode = "reauth";
+let currentJob = "";
+let timer = null;
+let redeemInput = "auto";
+let sessionToken = "";
+
+const $ = (id) => document.getElementById(id);
+
+function showPane(mode){
+  currentMode = mode;
+  document.querySelectorAll("#tabs .tab").forEach((tab) => {
+    tab.classList.toggle("is-active", tab.dataset.mode === mode);
+  });
+  ["reauth","redeem"].forEach((m) => $("pane-" + m).classList.toggle("hidden", m !== mode));
+}
+
+function selectedOutputs(mode){
+  if (mode === "reauth") return modeOutputs.reauth;
+  const picked = [...$("checks-redeem").querySelectorAll("input:checked")].map((el) => el.value);
+  return picked.length ? picked : modeOutputs.redeem;
+}
+
+function looksLikeJson(text){
+  const t = String(text || "").trim();
+  return t.startsWith("{") || t.startsWith("[");
+}
+
+function renderSteps(account){
+  return (account.steps || []).map((step) => `
+    <span class="step-chip is-${step.status}" title="${(step.message || "").replace(/"/g, "")}">
+      ${STATUS_ICON[step.status] || "○"} ${step.label}
+    </span>`).join("");
+}
+
+function renderSnapshot(mode, snap){
+  const pane = $("progress-" + mode);
+  pane.classList.remove("hidden");
+  const total = Math.max(1, snap.total);
+  pane.querySelector(".bar > i").style.width = Math.round((snap.done / total) * 100) + "%";
+  pane.querySelector(".accounts").innerHTML = snap.accounts.map((item) => {
+    const icon = STATUS_ICON[item.status] || "○";
+    const pill = item.status === "done"
+      ? `<span class="pill ok">成功${item.plan_type ? " · " + item.plan_type : ""}</span>`
+      : item.status === "error"
+        ? '<span class="pill bad">失败</span>'
+        : '<span class="pill">进行中</span>';
+    const cachePill = item.cached ? '<span class="pill cache">⚡ 缓存命中</span>' : "";
+    const time = item.seconds ? `<span class="acc-time">${item.seconds}s</span>` : "";
+    return `<li>
+      <div class="acc-top">
+        <span class="dot ${item.status}"></span>
+        <span class="acc-mail">${item.email}</span>
+        ${pill}${cachePill}${time}
+        <span class="acc-msg">${icon} ${item.message || ""}</span>
+      </div>
+      <div class="steps-head">${renderSteps(item)}</div>
+    </li>`;
+  }).join("");
+  const status = $("status-" + mode);
+  if (snap.errors && snap.errors.length){
+    status.textContent = "提示：" + snap.errors.slice(0,2).join("；");
+    status.className = "status";
+  }
+  if (!snap.finished){
+    status.textContent = `进行中 ${snap.done}/${snap.total}（成功 ${snap.ok}，失败 ${snap.failed}）`;
+    status.className = "status";
+    return;
+  }
+  status.textContent = `完成：成功 ${snap.ok}，失败 ${snap.failed}，总耗时 ${snap.elapsed || 0}s`;
+  status.className = "status " + (snap.ok ? "ok" : "error");
+  const box = pane.querySelector(".downloads");
+  box.innerHTML = "";
+  selectedOutputs(mode).forEach((kind) => {
+    const [label, hint] = outputLabels[kind];
+    const btn = document.createElement("button");
+    btn.className = "dl";
+    btn.innerHTML = `<b>⬇ ${label}</b><span>${hint}</span>`;
+    btn.onclick = () => { window.location = `/api/job/${currentJob}/download/${kind}`; };
+    box.appendChild(btn);
+  });
+}
+
+async function poll(mode){
+  const resp = await fetch(`/api/job/${currentJob}`);
+  const snap = await resp.json();
+  renderSnapshot(mode, snap);
+  if (snap.finished && timer){ clearInterval(timer); timer = null; }
+}
+
+function watch(mode){
+  if (timer) clearInterval(timer);
+  timer = setInterval(() => poll(mode), 1200);
+  return poll(mode);
+}
+
+async function ensureToken(force){
+  if (sessionToken && !force) return sessionToken;
+  const resp = await fetch("/api/session", {cache: "no-store"});
+  const data = await resp.json();
+  sessionToken = data.token || "";
+  return sessionToken;
+}
+
+async function postJson(url, body){
+  let token = await ensureToken(false);
+  let resp = await fetch(url, {
+    method: "POST",
+    headers: {"Content-Type": "application/json", "X-REAUTH-TOKEN": token},
+    body: JSON.stringify(body),
+  });
+  if (resp.status === 403){
+    token = await ensureToken(true);   // 令牌过期就换一张再来一次
+    resp = await fetch(url, {
+      method: "POST",
+      headers: {"Content-Type": "application/json", "X-REAUTH-TOKEN": token},
+      body: JSON.stringify(body),
+    });
+  }
+  return resp;
+}
+
+async function startRun(mode){
+  const btn = $("run-" + mode);
+  const status = $("status-" + mode);
+  const text = $("text-" + mode).value;
+  if (!text.trim()){
+    status.textContent = "先把卡密粘进来";
+    status.className = "status error";
+    return;
+  }
+  btn.disabled = true;
+  status.textContent = "提交中…";
+  status.className = "status";
+  try{
+    const asJson = mode === "redeem"
+      && (redeemInput === "json" || (redeemInput === "auto" && looksLikeJson(text)));
+    const url = asJson ? "/api/convert" : "/api/submit";
+    const body = asJson ? {text} : {text, mode};
+    const resp = await postJson(url, body);
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || "提交失败");
+    currentJob = data.job_id;
+    renderSnapshot(mode, data);
+    await watch(mode);
+  }catch(err){
+    status.textContent = err.message;
+    status.className = "status error";
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+/* ---------- 右下角：访客统计 ---------- */
+function visitorId(){
+  let id = localStorage.getItem("reauth_visitor_id");
+  if (!id){
+    id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+    localStorage.setItem("reauth_visitor_id", id);
+  }
+  return id;
+}
+
+function renderVisitors(data){
+  $("visitorToday").textContent = data.today_visitors ?? "--";
+  $("vpToday").textContent = data.today_visitors ?? "--";
+  $("vpVisits").textContent = data.today_visits ?? "--";
+  $("vpOnline").textContent = data.online ?? "--";
+  const days = data.days || [];
+  $("vpDays").innerHTML = days.map((item) => `
+    <div><span>${String(item.date).slice(5)}</span>
+      <i>${item.visitors} 人 / ${item.visits} 次</i></div>`).join("");
+}
+
+async function pingVisit(){
+  try{
+    const resp = await fetch("/api/visit", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({visitor_id: visitorId()}),
+      cache: "no-store",
+    });
+    renderVisitors(await resp.json());
+  }catch(err){ /* 统计失败不影响主功能 */ }
+}
+
+document.querySelectorAll("#tabs .tab").forEach((tab) => {
+  tab.addEventListener("click", () => showPane(tab.dataset.mode));
+});
+document.querySelectorAll("#modes-redeem .mode-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    redeemInput = btn.dataset.input;
+    document.querySelectorAll("#modes-redeem .mode-btn").forEach((item) => {
+      item.classList.toggle("is-active", item.dataset.input === redeemInput);
+    });
+  });
+});
+$("run-reauth").addEventListener("click", () => startRun("reauth"));
+$("run-redeem").addEventListener("click", () => startRun("redeem"));
+$("visitorSummary").addEventListener("click", () => {
+  const panel = $("visitorPanel");
+  const open = panel.classList.toggle("hidden");
+  $("visitorSummary").setAttribute("aria-expanded", String(!open));
+  if (!open) pingVisit();
+});
+$("visitorClose").addEventListener("click", () => {
+  $("visitorPanel").classList.add("hidden");
+  $("visitorSummary").setAttribute("aria-expanded", "false");
+});
+
+showPane("redeem");
+ensureToken(false);
+pingVisit();
+setInterval(pingVisit, 60000);
+fetch("/api/meta").then((r) => r.json()).then((meta) => {
+  if (meta.site_name) $("siteName").textContent = meta.site_name;
+  if (meta.notice) $("notice").textContent = meta.notice;
+  if (meta.max_accounts){
+    $("notice").insertAdjacentHTML("beforeend",
+      ` 单次最多 ${meta.max_accounts} 个，并发 ${meta.concurrency}。`);
+  }
+  // GitHub star 位：填了 REAUTH_GITHUB_URL 才会亮出来
+  if (meta.github_url){
+    $("ghSlot").href = meta.github_url;
+    $("ghSlot").classList.add("is-ready");
+  }
+}).catch(() => {});
+</script>
+</body>
+</html>

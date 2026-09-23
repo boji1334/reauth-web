@@ -1,0 +1,73 @@
+services:
+  reauth-web:
+    build: .
+    image: reauth-web:latest
+    container_name: reauth-web
+    restart: unless-stopped
+    ports:
+      # 只对本机开放：对外统一走 Cloudflare -> Caddy，避免绕过 CF 直连源站
+      - "127.0.0.1:8899:8080"
+    environment:
+      REAUTH_DATA_DIR: /data
+      REAUTH_PROXY: ${REAUTH_PROXY:-}
+      REAUTH_CONCURRENCY: ${REAUTH_CONCURRENCY:-2}
+      REAUTH_MAX_ACCOUNTS: ${REAUTH_MAX_ACCOUNTS:-200}
+      REAUTH_MAX_JOBS_PER_IP: ${REAUTH_MAX_JOBS_PER_IP:-3}
+      REAUTH_MIN_INTERVAL_SECONDS: ${REAUTH_MIN_INTERVAL_SECONDS:-3}
+      REAUTH_ACCOUNT_TIMEOUT_SECONDS: ${REAUTH_ACCOUNT_TIMEOUT_SECONDS:-420}
+      REAUTH_JOB_TTL_SECONDS: ${REAUTH_JOB_TTL_SECONDS:-21600}
+      REAUTH_SESSION_CACHE_TTL_SECONDS: ${REAUTH_SESSION_CACHE_TTL_SECONDS:-21600}
+      REAUTH_SITE_NAME: ${REAUTH_SITE_NAME:-公益协议重登站}
+      REAUTH_SITE_NOTICE: ${REAUTH_SITE_NOTICE:-}
+      REAUTH_GITHUB_URL: ${REAUTH_GITHUB_URL:-}
+      # 卡密兑换的数据来源：上游成品站已生成的文件
+      REAUTH_UPSTREAM_BASE: ${REAUTH_UPSTREAM_BASE:-}
+      REAUTH_UPSTREAM_KEY: ${REAUTH_UPSTREAM_KEY:-}
+      REAUTH_UPSTREAM_TIMEOUT_SECONDS: ${REAUTH_UPSTREAM_TIMEOUT_SECONDS:-90}
+      REAUTH_SIGNING_SECRET: ${REAUTH_SIGNING_SECRET:-}
+      REAUTH_RATE_LIMIT_PER_MINUTE: ${REAUTH_RATE_LIMIT_PER_MINUTE:-120}
+      REAUTH_SUBMIT_LIMIT_PER_MINUTE: ${REAUTH_SUBMIT_LIMIT_PER_MINUTE:-6}
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 1024M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # 反向代理：给 Cloudflare 回源（80 跳转 / 443 自签 internal 证书）
+  caddy:
+    image: caddy:2-alpine
+    container_name: reauth-caddy
+    restart: unless-stopped
+    depends_on:
+      - reauth-web
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      REAUTH_DOMAIN: ${REAUTH_DOMAIN:-reauth.example.com}
+      REAUTH_ACME_EMAIL: ${REAUTH_ACME_EMAIL:-admin@example.com}
+      # 回源白名单：只有 Cloudflare 官方 IP 段能访问源站（由部署脚本生成）
+      REAUTH_TRUSTED_IPS: ${REAUTH_TRUSTED_IPS:-127.0.0.1}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  caddy-data:
+  caddy-config:

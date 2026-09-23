@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.codex-tmp*
+artifacts/
+
+# 私有凭据（部署参数、出口代理），绝不进仓库
+.deploy.env
+.env
+*.secret
+api_token.txt
