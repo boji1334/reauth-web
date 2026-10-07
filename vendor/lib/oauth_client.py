@@ -623,7 +623,7 @@ class OAuthClient:
             return None
         
         # 4. 提交密码
-        self._log("步骤3: POST /api/accounts/password/verify")
+        self._log("步骤3: POST /api/first_party_authorize/next（PKCE 密码提交）")
         sentinel_pwd = build_sentinel_token(
             self.session, device_id, flow="password_verify",
             user_agent=user_agent, sec_ch_ua=sec_ch_ua, impersonate=impersonate
@@ -644,25 +644,64 @@ class OAuthClient:
         }
         headers_verify.update(generate_datadog_trace())
         
-        # 真实接口当前只接受顶层 password 字段；
-        # username / origin_page_type / intent 放进去会分别触发
-        # unknown_parameter 或 missing_required_parameter。
-        payload_pwd = {"password": password}
-        
-        try:
-            kwargs = {"json": payload_pwd, "headers": headers_verify, "timeout": 30, "allow_redirects": False}
+        # PKCE 客户端的密码提交已从 /api/accounts/password/verify 迁移到
+        # /api/first_party_authorize/next，payload 结构也变成嵌套形式。
+        # 旧端点在 PKCE 流程下已失效（返回 401 invalid_username_or_password）。
+        # 注意：新端点在密码错误时仍返回 HTTP 200，错误藏在 payload.errors 里。
+        payload_pwd = {
+            "origin_page_type": "login_password",
+            "data": {
+                "intent": "validate",
+                "username": {"kind": "email", "value": email},
+                "password": password,
+            },
+        }
+        # 旧端点 payload（仅作回退）
+        payload_pwd_legacy = {"password": password}
+        password_endpoint = f"{self.oauth_issuer}/api/first_party_authorize/next"
+
+        def _parse_auth_error(body, status):
+            """从新旧响应体里抽取错误码，供上层给出可读提示。"""
+            try:
+                data = json.loads(body) if isinstance(body, str) else (body or {})
+            except Exception:
+                return ""
+            if not isinstance(data, dict):
+                return ""
+            # 旧格式：{"error": {"code": "..."}}
+            err = data.get("error")
+            if isinstance(err, dict) and err.get("code"):
+                return str(err.get("code"))
+            # 新格式：{"payload": {"errors": {"metadata": [{"code": ...}]}}}
+            payload = data.get("payload") or {}
+            errors = payload.get("errors") or {}
+            meta = errors.get("metadata") or []
+            if isinstance(meta, list):
+                for item in meta:
+                    if isinstance(item, dict) and item.get("code"):
+                        return str(item.get("code"))
+            return ""
+
+        def _post_password(endpoint, payload):
+            kwargs = {"json": payload, "headers": headers_verify, "timeout": 30, "allow_redirects": False}
             if impersonate:
                 kwargs["impersonate"] = impersonate
-            
-            r = self.session.post(
-                f"{self.oauth_issuer}/api/accounts/password/verify",
-                **kwargs
-            )
-            
-            self._log(f"/password/verify -> {r.status_code}")
+            return self.session.post(endpoint, **kwargs)
+
+        try:
+            r = _post_password(password_endpoint, payload_pwd)
+
+            self._log(f"/first_party_authorize/next -> {r.status_code}")
+
+            # 若新端点不可用（404/405 等），回退到旧端点
+            if r.status_code in (404, 405):
+                self._log("新端点不可用，回退 /api/accounts/password/verify")
+                password_endpoint = f"{self.oauth_issuer}/api/accounts/password/verify"
+                r = _post_password(password_endpoint, payload_pwd_legacy)
+                self._log(f"/password/verify -> {r.status_code}")
 
             if r.status_code == 409 and "invalid_state" in (r.text or ""):
-                self._log("password/verify 命中 invalid_state，重新访问密码页后重试一次")
+                self._log("密码提交命中 invalid_state，重新访问密码页后重试一次")
                 refreshed_password_url = self._visit_oauth_page(
                     password_page_url,
                     referer=continue_referer,
@@ -674,20 +713,42 @@ class OAuthClient:
                     headers_verify["Referer"] = password_page_url
                     headers_verify.update(generate_datadog_trace())
 
-                kwargs = {"json": payload_pwd, "headers": headers_verify, "timeout": 30, "allow_redirects": False}
-                if impersonate:
-                    kwargs["impersonate"] = impersonate
+                r = _post_password(password_endpoint, payload_pwd)
 
-                r = self.session.post(
-                    f"{self.oauth_issuer}/api/accounts/password/verify",
-                    **kwargs
-                )
+                self._log(f"密码提交(重试) -> {r.status_code}")
 
-                self._log(f"/password/verify(重试) -> {r.status_code}")
+            # 新端点密码错误会返回 200 + payload.errors，需要显式识别
+            pwd_error_code = ""
+            r_text_for_error = ""
+            if r.status_code == 200:
+                try:
+                    pwd_data = r.json()
+                except Exception:
+                    pwd_data = None
+                if isinstance(pwd_data, dict):
+                    pwd_error_code = _parse_auth_error(pwd_data, 200)
+                    # 新端点：type=login_password 且带 errors，表示密码被拒
+                    if pwd_error_code or (
+                        str(pwd_data.get("type") or "") == "login_password"
+                        and (pwd_data.get("payload") or {}).get("errors")
+                    ):
+                        if not pwd_error_code:
+                            pwd_error_code = "invalid_username_or_password"
+                        self._log(f"密码被拒（{pwd_error_code}），不继续后续流程")
+                        r_text_for_error = r.text
+                        r = None  # 标记失败，走下面的错误处理
+            else:
+                pwd_error_code = _parse_auth_error(r.text, r.status_code)
 
-            if r.status_code in (401, 409):
-                if r.status_code == 401 and mail_client is not None:
-                    self._log("password/verify -> 401，尝试 passwordless/send-otp")
+            if r is None or r.status_code in (401, 409):
+                failed_text = r_text_for_error if r is None else (r.text or "")
+                # 凭据本身错误时直接失败，没必要再走 passwordless / session 恢复
+                if pwd_error_code == "invalid_username_or_password" or "invalid_username_or_password" in failed_text:
+                    self._log("凭据不正确，终止本次登录")
+                    return None
+
+                if mail_client is not None:
+                    self._log("密码提交失败，尝试 passwordless/send-otp")
                     headers_pwdless = {
                         "Content-Type": "application/json",
                         "Accept": "application/json",
@@ -739,7 +800,7 @@ class OAuthClient:
                     except Exception as e:
                         self._log(f"passwordless/send-otp 异常: {e}")
 
-                self._log("password/verify 失败，尝试从现有 session 恢复 consent/workspace 流程")
+                self._log("密码提交失败，尝试从现有 session 恢复 consent/workspace 流程")
                 recovery_consent = f"{self.oauth_issuer}/sign-in-with-chatgpt/codex/consent"
                 recovery_code = self._oauth_submit_workspace_and_org(
                     recovery_consent, device_id, user_agent, impersonate
@@ -756,16 +817,37 @@ class OAuthClient:
                     self._log("session 恢复成功，拿到 authorization code")
                     tokens = self._exchange_code_for_tokens(recovery_code, code_verifier, user_agent, impersonate)
                     if tokens:
-                        self._log("✅ OAuth 登录成功（password/verify 失败后 session 恢复）")
+                        self._log("✅ OAuth 登录成功（密码提交失败后 session 恢复）")
                         return tokens
-            
+
+            if r is None:
+                return None
+
             if r.status_code != 200:
                 self._log(f"密码验证失败: {r.text[:180]}")
                 return None
-            
+
             verify_data = r.json()
-            continue_url = verify_data.get("continue_url", "") or continue_url
-            page_type = verify_data.get("page", {}).get("type", "") or page_type
+            # 兼容新旧响应结构：
+            #   旧: {"continue_url": ..., "page": {"type": ...}}
+            #   新: {"type": ..., "payload": {...}}（continue_url 可能嵌在 payload 里）
+            if not isinstance(verify_data, dict):
+                verify_data = {}
+            new_continue_url = verify_data.get("continue_url", "") or ""
+            if not new_continue_url:
+                vpayload = verify_data.get("payload")
+                if isinstance(vpayload, dict):
+                    new_continue_url = (
+                        vpayload.get("continue_url", "")
+                        or vpayload.get("url", "")
+                        or ""
+                    )
+            continue_url = new_continue_url or continue_url
+            page_type = (
+                verify_data.get("page", {}).get("type", "")
+                or verify_data.get("type", "")
+                or page_type
+            )
             self._log(f"verify page={page_type or '-'} next={self._redact_url(continue_url)[:80] if continue_url else '-'}...")
             
             # 检查是否需要 OTP
